@@ -1,10 +1,6 @@
-ctypes; platform_system=="Windows"
 psutil
 plyer
 requests
 pystray
 Pillow
-winsound; platform_system=="Windows"
 win10toast
-json
-tk
