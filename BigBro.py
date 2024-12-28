@@ -204,7 +204,7 @@ class NetworkCardSelector:
             self.root.iconbitmap(icon_path)
 
         window_width = 500  # Genişlik
-        window_height = 600  # Hündürlük
+        window_height = 620  # Hündürlük
 
         # Ekran ölçülərini əldə edin
         screen_width = self.root.winfo_screenwidth()
@@ -484,7 +484,8 @@ class ConnectionMonitorApp:
         window_width = 1300  # Pəncərənin genişliyini 1300 təyin edirik
         window_height = 900  # Pəncərənin hündürlüyü 900
 
-        self.root.geometry(f"{window_width}x{window_height}")
+        self.root.geometry(f"{self.root.winfo_screenwidth()}x{self.root.winfo_screenheight()}")
+        self.root.state("zoomed")  # Tam ekran rejimi
 
         # Ekranın ölçülərini əldə edirik
         screen_width = self.root.winfo_screenwidth()
@@ -548,11 +549,11 @@ class ConnectionMonitorApp:
             self.root,
             columns=("IP", "Port", "Protocol", "Process", "Country", "Cloudflare", "VirusTotal", "AbuseIPDB", "Whois", "Bro Scan"),
             show="headings",
-            height=15
+            height=12
         )
 
         
-        self.tree.pack(pady=20)
+        self.tree.pack(pady=10)
         self.tree.bind("<Button-1>", self.handle_action_click)
                 # Checkbox Frame
         self.checkbox_frame = tk.Frame(self.root, bg="#2e2e2e")
