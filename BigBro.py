@@ -505,43 +505,37 @@ class ConnectionMonitorApp:
         self.title_label = tk.Label(self.root, text=f"Monitoring: {adapter}", font=("Arial", 18, 'bold'), bg="#2e2e2e", fg="#ffffff")
         self.title_label.pack(pady=20)
 
-        # Search for IP
-        self.search_ip_label = tk.Label(self.root, text="Search by IP:", font=("Arial", 12), bg="#2e2e2e", fg="#dcdcdc")
-        self.search_ip_label.pack(pady=5)
+        # IP və Port bölmələri üçün bir frame yaradın
+        # IP və Port bölmələri üçün bir frame yaradın
+        search_frame = tk.Frame(self.root, bg="#2e2e2e")
+        search_frame.pack(pady=10)
 
-        self.search_ip_entry = tk.Entry(self.root, font=("Arial", 12), width=30, bg="#424242", fg="#ffffff", insertbackground="#ffffff")
-        self.search_ip_entry.pack(pady=5)
+        # IP bölməsi
+        self.search_ip_label = tk.Label(search_frame, text="Search by IP:", font=("Arial", 12), bg="#2e2e2e", fg="#dcdcdc")
+        self.search_ip_label.grid(row=0, column=0, padx=5)
 
-        # Frame to hold the buttons for filtering IP
-        ip_button_frame = tk.Frame(self.root, bg="#2e2e2e")
-        ip_button_frame.pack(pady=5)
+        self.search_ip_entry = tk.Entry(search_frame, font=("Arial", 12), width=15, bg="#424242", fg="#ffffff", insertbackground="#ffffff")
+        self.search_ip_entry.grid(row=0, column=1, padx=5)
 
-        # Filter by IP Button
-        self.search_ip_button = tk.Button(ip_button_frame, text="Filter by IP", font=("Arial", 10), command=self.filter_by_ip, bg="#016c87", fg="#ffffff", relief="flat")
-        self.search_ip_button.pack(side="left", padx=5)
+        self.search_ip_button = tk.Button(search_frame, text="Filter by IP", font=("Arial", 10), command=self.filter_by_ip, bg="#016c87", fg="#ffffff", relief="flat")
+        self.search_ip_button.grid(row=0, column=2, padx=5)
 
-        # Clear IP Filter Button
-        self.clear_ip_button = tk.Button(ip_button_frame, text="Clear IP Filter", font=("Arial", 10), command=self.clear_ip_filter, bg="#016c87", fg="#ffffff", relief="flat")
-        self.clear_ip_button.pack(side="left", padx=5)
+        self.clear_ip_button = tk.Button(search_frame, text="Clear IP Filter", font=("Arial", 10), command=self.clear_ip_filter, bg="#016c87", fg="#ffffff", relief="flat")
+        self.clear_ip_button.grid(row=0, column=3, padx=5)
 
-        # Search for Port
-        self.search_port_label = tk.Label(self.root, text="Search by Port:", font=("Arial", 12), bg="#2e2e2e", fg="#dcdcdc")
-        self.search_port_label.pack(pady=5)
+        # Port bölməsi - eyni sırada
+        self.search_port_label = tk.Label(search_frame, text="Search by Port:", font=("Arial", 12), bg="#2e2e2e", fg="#dcdcdc")
+        self.search_port_label.grid(row=0, column=4, padx=20)  # Arada məsafə üçün padx artırılır
 
-        self.search_port_entry = tk.Entry(self.root, font=("Arial", 12), width=30, bg="#424242", fg="#ffffff", insertbackground="#ffffff")
-        self.search_port_entry.pack(pady=5)
+        self.search_port_entry = tk.Entry(search_frame, font=("Arial", 12), width=15, bg="#424242", fg="#ffffff", insertbackground="#ffffff")
+        self.search_port_entry.grid(row=0, column=5, padx=5)
 
-        # Frame to hold the buttons for filtering Port
-        port_button_frame = tk.Frame(self.root, bg="#2e2e2e")
-        port_button_frame.pack(pady=5)
+        self.search_port_button = tk.Button(search_frame, text="Filter by Port", font=("Arial", 10), command=self.filter_by_port, bg="#016c87", fg="#ffffff", relief="flat")
+        self.search_port_button.grid(row=0, column=6, padx=5)
 
-        # Filter by Port Button
-        self.search_port_button = tk.Button(port_button_frame, text="Filter by Port", font=("Arial", 10), command=self.filter_by_port, bg="#016c87", fg="#ffffff", relief="flat")
-        self.search_port_button.pack(side="left", padx=5)
+        self.clear_port_button = tk.Button(search_frame, text="Clear Port Filter", font=("Arial", 10), command=self.clear_port_filter, bg="#016c87", fg="#ffffff", relief="flat")
+        self.clear_port_button.grid(row=0, column=7, padx=5)
 
-        # Clear Port Filter Button
-        self.clear_port_button = tk.Button(port_button_frame, text="Clear Port Filter", font=("Arial", 10), command=self.clear_port_filter, bg="#016c87", fg="#ffffff", relief="flat")
-        self.clear_port_button.pack(side="left", padx=5)
 
 
         # Treeview table to show connection details
@@ -549,7 +543,7 @@ class ConnectionMonitorApp:
             self.root,
             columns=("IP", "Port", "Protocol", "Process", "Country", "Cloudflare", "VirusTotal", "AbuseIPDB", "Whois", "Bro Scan"),
             show="headings",
-            height=12
+            height=15
         )
 
         
