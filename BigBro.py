@@ -87,8 +87,9 @@ SUSPICIOUS_FILE = os.path.join(LIST_DIR, "suspicious_ips.txt")
 CLEAN_FILE = os.path.join(LIST_DIR, "clean_ips.txt")
 TELEGRAM_BOT_TOKEN_FILE = os.path.join(BIG_BRO_DIR, "telegram_bot_token.txt")
 TELEGRAM_BOT_CHAT_ID_FILE = os.path.join(BIG_BRO_DIR, "telegram_bot_chat_id.txt")
+# Proqram başladığında dəyərləri yükləyirik
 def load_telegram_data(file_path_token, file_path_chat):
-    """ Bot token və chat id-ni fayldan oxumaq """
+    """ Bot token və chat id-ni fayldan oxuyur və `******-******-******-******-******` kimi göstərir """
     bot_token, chat_id = "", ""
     
     if os.path.exists(file_path_token):
@@ -99,7 +100,10 @@ def load_telegram_data(file_path_token, file_path_chat):
         with open(file_path_chat, "r") as file:
             chat_id = file.read().strip()
     
+    # Fayldan oxunan real dəyərləri qaytarır
     return bot_token, chat_id
+
+
 
 def save_telegram_data(bot_token, chat_id, file_path_token, file_path_chat):
     """ Bot token və chat id-ni faylda saxlamaq """
@@ -285,6 +289,7 @@ class NetworkCardSelector:
 
         self.delete_bot_token_button = tk.Button(bot_token_button_frame, text="Delete Bot Token", font=("Arial", 10), command=self.delete_bot_token, bg="#830000", fg="#ffffff", relief="flat")
         self.delete_bot_token_button.pack(side="left", padx=5)
+        
 
         # Chat ID Section
         self.chat_id_label = tk.Label(self.root, text="Enter Chat ID:", font=("Arial", 12), bg="#2e2e2e", fg="#dcdcdc")
@@ -301,15 +306,18 @@ class NetworkCardSelector:
 
         self.delete_chat_id_button = tk.Button(chat_id_button_frame, text="Delete Chat ID", font=("Arial", 10), command=self.delete_chat_id, bg="#830000", fg="#ffffff", relief="flat")
         self.delete_chat_id_button.pack(side="left", padx=5)
+                # Telegram bot token və chat ID-ni fayldan oxuyuruq
         # Telegram bot token və chat ID-ni fayldan oxuyuruq
-        bot_token = load_api_key(TELEGRAM_BOT_TOKEN_FILE)
-        chat_id = load_api_key(TELEGRAM_BOT_CHAT_ID_FILE)
+        bot_token, chat_id = load_telegram_data(TELEGRAM_BOT_TOKEN_FILE, TELEGRAM_BOT_CHAT_ID_FILE)
 
-        # Fayldan oxunan dəyərləri giriş sahələrinə daxil edirik
+        # Fayldan oxunan dəyərləri gizli formatda (`******-******-******-******-******`) daxil edirik
         if bot_token:
-            self.bot_token_entry.insert(0, bot_token)
+            self.bot_token_entry.delete(0, tk.END)
+            self.bot_token_entry.insert(0, "******-******-******-******-******")
         if chat_id:
-            self.chat_id_entry.insert(0, chat_id)
+            self.chat_id_entry.delete(0, tk.END)
+            self.chat_id_entry.insert(0, "******-******-******-******-******")
+
 
     def get_network_adapters(self):
         return list(psutil.net_if_addrs().keys())
@@ -384,32 +392,39 @@ class NetworkCardSelector:
         if bot_token:  # Boş olmadığını yoxlayırıq
             with open(TELEGRAM_BOT_TOKEN_FILE, "w") as file:
                 file.write(bot_token)
+            # Dəyəri saxladıqdan sonra `Entry` sahəsini yeniləyirik
+            self.bot_token_entry.delete(0, tk.END)
+            self.bot_token_entry.insert(0, "******-******-******-******-******")
             messagebox.showinfo("Bot Token Saved", "Bot Token has been saved.")
         else:
             messagebox.showerror("Error", "Bot Token cannot be empty.")
+
 
     def save_chat_id(self):
         chat_id = self.chat_id_entry.get()
         if chat_id:  # Boş olmadığını yoxlayırıq
             with open(TELEGRAM_BOT_CHAT_ID_FILE, "w") as file:
                 file.write(chat_id)
+            # Dəyəri saxladıqdan sonra `Entry` sahəsini yeniləyirik
+            self.chat_id_entry.delete(0, tk.END)
+            self.chat_id_entry.insert(0, "******-******-******-******-******")
             messagebox.showinfo("Chat ID Saved", "Chat ID has been saved.")
         else:
             messagebox.showerror("Error", "Chat ID cannot be empty.")
 
+
     def delete_bot_token(self):
         if os.path.exists(TELEGRAM_BOT_TOKEN_FILE):
             os.remove(TELEGRAM_BOT_TOKEN_FILE)
-            messagebox.showinfo("Bot Token Deleted", "Bot Token has been deleted.")
-        else:
-            messagebox.showerror("Error", "No Bot Token to delete.")
+        self.bot_token_entry.delete(0, tk.END)
+        messagebox.showinfo("Deleted", "Bot Token has been deleted.")
 
     def delete_chat_id(self):
         if os.path.exists(TELEGRAM_BOT_CHAT_ID_FILE):
             os.remove(TELEGRAM_BOT_CHAT_ID_FILE)
-            messagebox.showinfo("Chat ID Deleted", "Chat ID has been deleted.")
-        else:
-            messagebox.showerror("Error", "No Chat ID to delete.")
+        self.chat_id_entry.delete(0, tk.END)
+        messagebox.showinfo("Deleted", "Chat ID has been deleted.")
+
 
 
     TELEGRAM_BOT_TOKEN_FILE = os.path.join(BIG_BRO_DIR, "telegram_bot_token.txt")
@@ -535,7 +550,7 @@ class ConnectionMonitorApp:
 
         self.clear_port_button = tk.Button(search_frame, text="Clear Port Filter", font=("Arial", 10), command=self.clear_port_filter, bg="#016c87", fg="#ffffff", relief="flat")
         self.clear_port_button.grid(row=0, column=7, padx=5)
-
+    
 
 
         # Treeview table to show connection details
@@ -545,6 +560,24 @@ class ConnectionMonitorApp:
             show="headings",
             height=15
         )
+
+
+        # Treeview üçün xüsusi tag konfiqurasiyası
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=25)
+
+        # Treeview üçün tag-ları təyin edirik (rənglər açıq göy olur)
+        self.tree.tag_configure("virustotal_col", foreground="#4682B4")  # Açıq mavi rəng
+        self.tree.tag_configure("abuseipdb_col", foreground="#4682B4")  # Açıq mavi rəng
+        self.tree.tag_configure("whois_col", foreground="#4682B4")       # Açıq mavi rəng
+        self.tree.tag_configure("broscan_col", foreground="#4682B4")    # Açıq mavi rəng
+
+
+
+
+
+
+
 
         
         self.tree.pack(pady=10)
@@ -556,6 +589,7 @@ class ConnectionMonitorApp:
         # Variables for Checkboxes
         self.all_events_var = tk.BooleanVar(value=False)
         self.suspicious_var = tk.BooleanVar(value=True)
+        self.only_malicious_var = tk.BooleanVar(value=False)  # Yeni checkbox üçün dəyişən
 
         # All Events Checkbox
         self.all_events_checkbox = tk.Checkbutton(
@@ -570,6 +604,15 @@ class ConnectionMonitorApp:
             selectcolor="#2e2e2e", activebackground="#2e2e2e", activeforeground="#ffffff", command=self.update_checkboxes
         )
         self.suspicious_checkbox.pack(side="left", padx=10)
+
+        # Only Malicious Checkbox
+        self.only_malicious_checkbox = tk.Checkbutton(
+            self.checkbox_frame, text="Only Malicious", variable=self.only_malicious_var, bg="#2e2e2e", fg="#ffffff",
+            selectcolor="#2e2e2e", activebackground="#2e2e2e", activeforeground="#ffffff", command=self.update_checkboxes
+        )
+
+        self.only_malicious_checkbox.pack(side="left", padx=10)
+
 
         # Adjusting the padding for each column in the table
         self.tree.heading("IP", text="IP Address", anchor="w", command=lambda: self.sort_treeview("IP"))
@@ -655,6 +698,10 @@ class ConnectionMonitorApp:
         self.tray_icon = None
         self.tree.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.tree.yview)
+
+
+
+
         
         
     def python_nmap_scan(self, ip, ports=range(1, 1024)):
@@ -811,15 +858,34 @@ class ConnectionMonitorApp:
         
         
 
-        
-    def add_row(self, ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb):
-        """Treeview'a satır əlavə edir və 'Whois' sütununa 'Whois' yazır."""
-        whois_info = "Whois"  # Static value for Whois column
-        self.tree.insert(
+                
+    def add_row(self, ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info="Whois", bro_scan_info="Bro Scan"):
+        """Treeview-a sətir əlavə edir və yalnız müəyyən sütunlara rəng tətbiq edir."""
+        row_id = self.tree.insert(
             "",
             tk.END,
-            values=(ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info)
+            values=(ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info, bro_scan_info)
         )
+
+        # Yalnız xüsusi sütunlara rəng tətbiq edirik
+        if virustotal and virustotal != "":
+            self.tree.item(row_id, tags=("virustotal_col",))
+
+        if abuseipdb and abuseipdb != "":
+            self.tree.item(row_id, tags=("abuseipdb_col",))
+
+        if whois_info and whois_info != "":
+            self.tree.item(row_id, tags=("whois_col",))
+
+        if bro_scan_info and bro_scan_info != "":
+            self.tree.item(row_id, tags=("broscan_col",))
+
+
+
+
+
+
+
 
 
 
@@ -1087,14 +1153,15 @@ class ConnectionMonitorApp:
 
                     # Əlaqə məlumatlarını əlavə edirik
                     process_info[connection_tuple] = (process_name, conn)
-                    row_id = self.tree.insert(
-                        "", tk.END,
-                        values=(conn.raddr.ip, conn.raddr.port, protocol, process_name, country, cloudflare_status, ip_status, abuseipdb_status)
+                    
+                    # `Whois` sütununa hər zaman "Whois" dəyəri yazılır
+                    whois_info = "Whois"
+                    self.add_row(
+                        conn.raddr.ip, conn.raddr.port, protocol, process_name,
+                        country, cloudflare_status, ip_status, abuseipdb_status, whois_info
                     )
-                    all_rows.append((row_id, (conn.raddr.ip, conn.raddr.port, protocol, process_name, country, cloudflare_status, ip_status, abuseipdb_status)))
 
-                    # Alert göndəririk
-                    self.send_alert(conn, ip_status, abuseipdb_status, country, cloudflare_status)
+
 
 
 
@@ -1214,12 +1281,13 @@ class ConnectionMonitorApp:
         """ IP ünvanına əsasən əlaqələri süzgəcdən keçirmək """
         search_ip = self.search_ip_entry.get()
         if search_ip:
-            # Ağacı təmizlə, amma məlumatları silmə
+            # Mövcud məlumatları təmizlə, amma `all_rows`-dan məlumatları silmə
             self.tree.delete(*self.tree.get_children())
             for row_id, values in all_rows:
                 ip = values[0]
                 if search_ip in ip:
-                    self.tree.insert("", tk.END, iid=row_id, values=values)
+                    self.tree.insert("", tk.END, iid=row_id, values=values, tags=("highlight_whois", "highlight_broscan", "highlight_virustotal", "highlight_abuseipdb"))
+
 
     def clear_ip_filter(self):
         """ IP filterini təmizləmək və əvvəlki məlumatları qaytarmaq """
@@ -1232,27 +1300,36 @@ class ConnectionMonitorApp:
         """ Port nömrəsinə əsasən əlaqələri süzgəcdən keçirmək """
         search_port = self.search_port_entry.get()
         if search_port:
-            # Ağacı təmizlə, amma məlumatları silmə
+            # Mövcud məlumatları təmizlə, amma `all_rows`-dan məlumatları silmə
             self.tree.delete(*self.tree.get_children())
             for row_id, values in all_rows:
                 port = str(values[1])  # Port nömrəsi
                 if search_port in port:
-                    self.tree.insert("", tk.END, iid=row_id, values=values)
+                    self.tree.insert("", tk.END, iid=row_id, values=values, tags=("highlight_whois", "highlight_broscan", "highlight_virustotal", "highlight_abuseipdb"))
+
 
     def clear_port_filter(self):
         """ Port filterini təmizləmək və əvvəlki məlumatları qaytarmaq """
         self.search_port_entry.delete(0, tk.END)
         self.tree.delete(*self.tree.get_children())
         for row_id, values in all_rows:
-            self.tree.insert("", tk.END, iid=row_id, values=values)
+            self.tree.insert("", tk.END, iid=row_id, values=values, tags=("highlight_whois", "highlight_broscan", "highlight_virustotal", "highlight_abuseipdb"))
+
 
 
     def update_checkboxes(self):
         """Checkbox durumlarını günceller"""
         if self.all_events_var.get():
             self.suspicious_var.set(False)
+            self.only_malicious_var.set(False)
         elif self.suspicious_var.get():
             self.all_events_var.set(False)
+            self.only_malicious_var.set(False)
+        elif self.only_malicious_var.get():
+            self.all_events_var.set(False)
+            self.suspicious_var.set(False)
+
+
     
     def send_alert(self, conn, ip_status, abuseipdb_status, country, cloudflare_status):
         """Yeni əlaqə haqqında bildiriş göndərmək"""
@@ -1270,7 +1347,10 @@ class ConnectionMonitorApp:
             process_name = 'Unknown'
 
         # Checkbox durumuna görə filtr
-        if self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
+        if self.only_malicious_var.get():  # "Only Malicious" seçilibsə
+            if "Malicious" not in ip_status:
+                return  # Əgər nəticələr "Malicious" deyilsə, bildiriş göndərməyin
+        elif self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
             if not ("Malicious" in ip_status or "Suspicious" in ip_status):
                 return  # Əgər nəticələr "Malicious" və ya "Suspicious" deyilsə, bildiriş göndərməyin
 
@@ -1327,6 +1407,7 @@ class ConnectionMonitorApp:
             winsound.MessageBeep(winsound.MB_ICONHAND)  # Malicious üçün kritik səs
         elif sound_type == "warning":
             winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+
 
 
 
