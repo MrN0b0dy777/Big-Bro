@@ -551,7 +551,7 @@ class ConnectionMonitorApp:
         self.clear_port_button = tk.Button(search_frame, text="Clear Port Filter", font=("Arial", 10), command=self.clear_port_filter, bg="#016c87", fg="#ffffff", relief="flat")
         self.clear_port_button.grid(row=0, column=7, padx=5)
     
-
+        
 
         # Treeview table to show connection details
         self.tree = ttk.Treeview(
@@ -566,11 +566,14 @@ class ConnectionMonitorApp:
         style = ttk.Style()
         style.configure("Treeview", rowheight=25)
 
-        # Treeview üçün tag-ları təyin edirik (rənglər açıq göy olur)
-        self.tree.tag_configure("virustotal_col", foreground="#4682B4")  # Açıq mavi rəng
-        self.tree.tag_configure("abuseipdb_col", foreground="#4682B4")  # Açıq mavi rəng
-        self.tree.tag_configure("whois_col", foreground="#4682B4")       # Açıq mavi rəng
-        self.tree.tag_configure("broscan_col", foreground="#4682B4")    # Açıq mavi rəng
+        # Seçilmiş sütunlara mavi rəng tətbiq edilir
+        self.tree.tag_configure("highlight_virustotal", foreground="#000000")  # VirusTotal üçün açıq mavi
+        self.tree.tag_configure("highlight_abuseipdb", foreground="#000000")  # AbuseIPDB üçün açıq mavi
+        self.tree.tag_configure("highlight_whois", foreground="#000000")      # Whois üçün açıq mavi
+        self.tree.tag_configure("highlight_broscan", foreground="#000000")   # Bro Scan üçün açıq mavi
+
+        # Qalan sütunlar qara rəngdə olacaq
+        self.tree.tag_configure("default", foreground="#000000")
 
 
 
@@ -581,6 +584,7 @@ class ConnectionMonitorApp:
 
         
         self.tree.pack(pady=10)
+        self.create_context_menu()
         self.tree.bind("<Button-1>", self.handle_action_click)
                 # Checkbox Frame
         self.checkbox_frame = tk.Frame(self.root, bg="#2e2e2e")
@@ -605,13 +609,6 @@ class ConnectionMonitorApp:
         )
         self.suspicious_checkbox.pack(side="left", padx=10)
 
-        # Only Malicious Checkbox
-        self.only_malicious_checkbox = tk.Checkbutton(
-            self.checkbox_frame, text="Only Malicious", variable=self.only_malicious_var, bg="#2e2e2e", fg="#ffffff",
-            selectcolor="#2e2e2e", activebackground="#2e2e2e", activeforeground="#ffffff", command=self.update_checkboxes
-        )
-
-        self.only_malicious_checkbox.pack(side="left", padx=10)
 
 
         # Adjusting the padding for each column in the table
@@ -651,6 +648,9 @@ class ConnectionMonitorApp:
 
         # Link scrollbar with TreeviewFkil
         self.tree.config(yscrollcommand=self.scrollbar.set)
+        self.tree.bind("<Motion>", self.on_mouse_hover)  # Mouse hover effekti
+        self.tree.bind("<Button-1>", self.handle_action_click)  # Klik edilən sütun üçün
+
 
         # Connection Status Label
         self.status_label = tk.Label(self.root, text="Big Bro can see everything...", font=("Arial", 12), bg="#2e2e2e", fg="#f90f00")
@@ -858,39 +858,20 @@ class ConnectionMonitorApp:
         
         
 
-                
+                        
     def add_row(self, ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info="Whois", bro_scan_info="Bro Scan"):
-        """Treeview-a sətir əlavə edir və yalnız müəyyən sütunlara rəng tətbiq edir."""
+        """Treeview-a sətir əlavə edir və `all_rows`-a məlumatı əlavə edir."""
         row_id = self.tree.insert(
             "",
             tk.END,
-            values=(ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info, bro_scan_info)
+            values=(ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info, bro_scan_info),
         )
-
-        # Yalnız xüsusi sütunlara rəng tətbiq edirik
-        if virustotal and virustotal != "":
-            self.tree.item(row_id, tags=("virustotal_col",))
-
-        if abuseipdb and abuseipdb != "":
-            self.tree.item(row_id, tags=("abuseipdb_col",))
-
-        if whois_info and whois_info != "":
-            self.tree.item(row_id, tags=("whois_col",))
-
-        if bro_scan_info and bro_scan_info != "":
-            self.tree.item(row_id, tags=("broscan_col",))
+        # Məlumatları "all_rows"-a əlavə edin
+        all_rows.append((row_id, (ip, port, protocol, process, country, cloudflare, virustotal, abuseipdb, whois_info, bro_scan_info)))
 
 
 
 
-
-
-
-
-
-
-
-        
     def handle_action_click(self, event):
         # Klik edilən bölgəni və sütunu müəyyən edirik
         region = self.tree.identify_region(event.x, event.y)
@@ -923,6 +904,115 @@ class ConnectionMonitorApp:
             values = self.tree.item(row_id, "values")
             ip = values[0]
             self.ask_port_range(ip)
+
+
+
+
+
+
+
+    def on_mouse_hover(self, event):
+        """Mouse müəyyən sütunun üzərinə gələndə keçid effekti yaradır."""
+        region = self.tree.identify_region(event.x, event.y)
+        column = self.tree.identify_column(event.x)
+
+        # Yalnız keçid üçün nəzərdə tutulmuş sütunlar
+        link_columns = ["#7", "#8", "#9", "#10"]  # VirusTotal, AbuseIPDB, Whois, Bro Scan
+
+        if region == "cell" and column in link_columns:
+            self.tree.configure(cursor="hand2")  # Keçid effekti (əl şəkli)
+        else:
+            self.tree.configure(cursor="")  # Default kursor
+
+
+
+
+
+
+        
+    def handle_action_click(self, event):
+        """Klik edilən sütuna görə əməliyyat icra edir."""
+        region = self.tree.identify_region(event.x, event.y)
+        column = self.tree.identify_column(event.x)
+        row_id = self.tree.identify_row(event.y)
+
+        if not row_id:  # Əgər klik boş yerdirsə
+            return
+
+        # Sütun indekslərinə əsasən əməliyyat
+        if region == "cell":
+            if column == "#7":  # VirusTotal sütunu
+                values = self.tree.item(row_id, "values")
+                ip = values[0]
+                self.open_virustotal(ip)
+            elif column == "#8":  # AbuseIPDB sütunu
+                values = self.tree.item(row_id, "values")
+                ip = values[0]
+                self.open_abuseipdb(ip)
+            elif column == "#9":  # Whois sütunu
+                values = self.tree.item(row_id, "values")
+                ip = values[0]
+                self.open_whois(ip)
+            elif column == "#10":  # Bro Scan sütunu
+                values = self.tree.item(row_id, "values")
+                ip = values[0]
+                self.ask_port_range(ip)
+                
+                
+                
+                
+    def create_context_menu(self):
+        """Sağ klik üçün kontekst menyusunu yaradır."""
+        self.context_menu = tk.Menu(self.tree, tearoff=0)
+        self.context_menu.add_command(label="Go to VirusTotal link", command=self.open_virustotal_from_menu)
+        self.context_menu.add_command(label="Go to AbuseIPDB link", command=self.open_abuseipdb_from_menu)
+        self.context_menu.add_command(label="Go to Whois link", command=self.open_whois_from_menu)
+        self.context_menu.add_command(label="Bro Scan", command=self.open_bro_scan_from_menu)
+
+        # Sağ klik hadisəsini bağlayırıq
+        self.tree.bind("<Button-3>", self.show_context_menu)
+
+    def show_context_menu(self, event):
+        """Sağ klik edildikdə menyunu göstərir."""
+        row_id = self.tree.identify_row(event.y)  # Klik edilən sətiri tapırıq
+        if row_id:
+            self.tree.selection_set(row_id)  # Sətiri seçirik
+            self.context_menu.post(event.x_root, event.y_root)
+
+    def open_virustotal_from_menu(self):
+        """Seçilmiş IP üçün VirusTotal səhifəsini açır."""
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item[0], "values")
+            ip = values[0]
+            self.open_virustotal(ip)
+
+    def open_abuseipdb_from_menu(self):
+        """Seçilmiş IP üçün AbuseIPDB səhifəsini açır."""
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item[0], "values")
+            ip = values[0]
+            self.open_abuseipdb(ip)
+
+    def open_whois_from_menu(self):
+        """Seçilmiş IP üçün Whois səhifəsini açır."""
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item[0], "values")
+            ip = values[0]
+            self.open_whois(ip)
+
+    def open_bro_scan_from_menu(self):
+        """Seçilmiş IP üçün Bro Scan funksiyasını işə salır."""
+        selected_item = self.tree.selection()
+        if selected_item:
+            values = self.tree.item(selected_item[0], "values")
+            ip = values[0]
+            self.ask_port_range(ip)
+                
+    
+    
 
     def get_whois_info(self, ip):
         """IP ünvanı üçün Whois məlumatlarını alır."""
@@ -1278,15 +1368,15 @@ class ConnectionMonitorApp:
                 print(f"Monitoring error: {e}")
 
     def filter_by_ip(self):
-        """ IP ünvanına əsasən əlaqələri süzgəcdən keçirmək """
-        search_ip = self.search_ip_entry.get()
+        """IP ünvanına əsasən əlaqələri süzgəcdən keçirmək."""
+        search_ip = self.search_ip_entry.get().strip()
         if search_ip:
-            # Mövcud məlumatları təmizlə, amma `all_rows`-dan məlumatları silmə
-            self.tree.delete(*self.tree.get_children())
+            self.tree.delete(*self.tree.get_children())  # Mövcud məlumatları təmizləyirik
             for row_id, values in all_rows:
-                ip = values[0]
+                ip = values[0]  # IP ünvanı
                 if search_ip in ip:
-                    self.tree.insert("", tk.END, iid=row_id, values=values, tags=("highlight_whois", "highlight_broscan", "highlight_virustotal", "highlight_abuseipdb"))
+                    self.tree.insert("", tk.END, iid=row_id, values=values)  # Uyğun məlumatları əlavə edirik
+
 
 
     def clear_ip_filter(self):
@@ -1297,15 +1387,15 @@ class ConnectionMonitorApp:
             self.tree.insert("", tk.END, iid=row_id, values=values)
 
     def filter_by_port(self):
-        """ Port nömrəsinə əsasən əlaqələri süzgəcdən keçirmək """
-        search_port = self.search_port_entry.get()
+        """Port nömrəsinə əsasən əlaqələri süzgəcdən keçirmək."""
+        search_port = self.search_port_entry.get().strip()
         if search_port:
-            # Mövcud məlumatları təmizlə, amma `all_rows`-dan məlumatları silmə
-            self.tree.delete(*self.tree.get_children())
+            self.tree.delete(*self.tree.get_children())  # Mövcud məlumatları təmizləyirik
             for row_id, values in all_rows:
                 port = str(values[1])  # Port nömrəsi
                 if search_port in port:
-                    self.tree.insert("", tk.END, iid=row_id, values=values, tags=("highlight_whois", "highlight_broscan", "highlight_virustotal", "highlight_abuseipdb"))
+                    self.tree.insert("", tk.END, iid=row_id, values=values)  # Uyğun məlumatları əlavə edirik
+
 
 
     def clear_port_filter(self):
@@ -1318,95 +1408,92 @@ class ConnectionMonitorApp:
 
 
     def update_checkboxes(self):
-        """Checkbox durumlarını günceller"""
-        if self.all_events_var.get():
-            self.suspicious_var.set(False)
-            self.only_malicious_var.set(False)
-        elif self.suspicious_var.get():
-            self.all_events_var.set(False)
-            self.only_malicious_var.set(False)
-        elif self.only_malicious_var.get():
-            self.all_events_var.set(False)
-            self.suspicious_var.set(False)
+            """Checkbox durumlarını günceller"""
+            if self.all_events_var.get():
+                self.suspicious_var.set(False)
+            elif self.suspicious_var.get():
+                self.all_events_var.set(False)
+
+
 
 
     
     def send_alert(self, conn, ip_status, abuseipdb_status, country, cloudflare_status):
-        """Yeni əlaqə haqqında bildiriş göndərmək"""
+            """Yeni əlaqə haqqında bildiriş göndərmək"""
 
-        ip = conn.raddr.ip
-        port = conn.raddr.port
+            ip = conn.raddr.ip
+            port = conn.raddr.port
 
-        # Proses adını alırıq
-        if conn.pid:
-            try:
-                process_name = psutil.Process(conn.pid).name()
-            except psutil.NoSuchProcess:
+            # Proses adını alırıq
+            if conn.pid:
+                try:
+                    process_name = psutil.Process(conn.pid).name()
+                except psutil.NoSuchProcess:
+                    process_name = 'Unknown'
+            else:
                 process_name = 'Unknown'
-        else:
-            process_name = 'Unknown'
 
-        # Checkbox durumuna görə filtr
-        if self.only_malicious_var.get():  # "Only Malicious" seçilibsə
-            if "Malicious" not in ip_status:
-                return  # Əgər nəticələr "Malicious" deyilsə, bildiriş göndərməyin
-        elif self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
-            if not ("Malicious" in ip_status or "Suspicious" in ip_status):
-                return  # Əgər nəticələr "Malicious" və ya "Suspicious" deyilsə, bildiriş göndərməyin
+            # Checkbox durumuna görə filtr
+            if self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
+                if not ("Malicious" in ip_status or "Suspicious" in ip_status):
+                    return  # Əgər nəticələr "Malicious" və ya "Suspicious" deyilsə, bildiriş göndərməyin
 
-        # Emoji əsaslı alert statusu
-        if "Malicious" in ip_status:
-            event_type_emoji = "💥 Malicious"
-            sound_type = "malicious"
-        elif "Suspicious" in ip_status:
-            event_type_emoji = "⚠️ Suspicious"
-            sound_type = "warning"
-        elif "Clean" in ip_status:
-            event_type_emoji = "✅ Clean"
-            sound_type = None
-        else:
-            event_type_emoji = "🔍 Checking"
-            sound_type = None
+            # Emoji əsaslı alert statusu
+            if "Malicious" in ip_status:
+                event_type_emoji = "💥 Malicious"
+                sound_type = "malicious"
+            elif "Suspicious" in ip_status:
+                event_type_emoji = "⚠️ Suspicious"
+                sound_type = "warning"
+            elif "Clean" in ip_status:
+                event_type_emoji = "✅ Clean"
+                sound_type = None
+            else:
+                event_type_emoji = "🔍 Checking"
+                sound_type = None
 
-        # Emoji əsaslı bildiriş məzmunu
-        cloudflare_emoji = "☁️" if cloudflare_status == "Yes" else "🚫"
-        abuse_emoji = "🔥" if "High Risk" in abuseipdb_status else "⚖️" if "Medium Risk" in abuseipdb_status else "🔒"
-        virustotal_emoji = "💀" if "Malicious" in ip_status else "⚠️" if "Suspicious" in ip_status else "✅"
+            # Emoji əsaslı bildiriş məzmunu
+            cloudflare_emoji = "☁️" if cloudflare_status == "Yes" else "🚫"
+            abuse_emoji = "🔥" if "High Risk" in abuseipdb_status else "⚖️" if "Medium Risk" in abuseipdb_status else "🔒"
+            virustotal_emoji = "💀" if "Malicious" in ip_status else "⚠️" if "Suspicious" in ip_status else "✅"
 
-        # Notification mesajı (Windows üçün)
-        notification_message = (
-            f"🌐 IP: {ip}:{port} | 💻 Process: {process_name}\n"
-            f"🌏 Country: {country} | {cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
-            f"{virustotal_emoji} Virustotal: {ip_status}\n"
-            f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
-            "👁️ Big Bro says: Monitor your network carefully!"
-        )
+            # Notification mesajı (Windows üçün)
+            notification_message = (
+                f"🌐 IP: {ip}:{port} | 💻 Process: {process_name}\n"
+                f"🌏 Country: {country} | {cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
+                f"{virustotal_emoji} Virustotal: {ip_status}\n"
+                f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
+                "👁️ Big Bro says: Monitor your network carefully!"
+            )
 
-        # Telegram mesajı (istədiyiniz formatda)
-        telegram_message = (
-            f"{event_type_emoji}\n"
-            f"🌐 IP: {ip}:{port}\n"
-            f"💻 Process: {process_name}\n"
-            f"🌏 Country: {country}\n"
-            f"{cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
-            f"{virustotal_emoji} Virustotal: {ip_status}\n"
-            f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
-            "👁️ Big Brother is watching you!"
-        )
+            # Telegram mesajı (istədiyiniz formatda)
+            telegram_message = (
+                f"{event_type_emoji}\n"
+                f"🌐 IP: {ip}:{port}\n"
+                f"💻 Process: {process_name}\n"
+                f"🌏 Country: {country}\n"
+                f"{cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
+                f"{virustotal_emoji} Virustotal: {ip_status}\n"
+                f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
+                "👁️ Big Brother is watching you!"
+            )
 
-        notification_title = f"Event: {event_type_emoji}"
+            notification_title = f"Event: {event_type_emoji}"
 
-        # Windows bildirişi göstəririk
-        send_notification(notification_title, notification_message)
+            # Windows bildirişi göstəririk
+            send_notification(notification_title, notification_message)
 
-        # Telegram mesajını göndəririk (artıq asinxron şəkildə işləyəcək)
-        self.send_telegram_alert(telegram_message)
+            # Telegram mesajını göndəririk (artıq asinxron şəkildə işləyəcək)
+            self.send_telegram_alert(telegram_message)
 
-        # Riskli vəziyyətlər üçün səs siqnalı çalırıq
-        if sound_type == "malicious":
-            winsound.MessageBeep(winsound.MB_ICONHAND)  # Malicious üçün kritik səs
-        elif sound_type == "warning":
-            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+            # Riskli vəziyyətlər üçün səs siqnalı çalırıq
+            if sound_type == "malicious":
+                winsound.MessageBeep(winsound.MB_ICONHAND)  # Malicious üçün kritik səs
+            elif sound_type == "warning":
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+
+
+
 
 
 
