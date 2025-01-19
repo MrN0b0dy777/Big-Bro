@@ -610,6 +610,14 @@ class ConnectionMonitorApp:
         self.suspicious_checkbox.pack(side="left", padx=10)
 
 
+        # Only Malicious Checkbox
+        self.only_malicious_checkbox = tk.Checkbutton(
+            self.checkbox_frame, text="Only Malicious", variable=self.only_malicious_var, bg="#2e2e2e", fg="#ffffff",
+            selectcolor="#2e2e2e", activebackground="#2e2e2e", activeforeground="#ffffff", command=self.update_checkboxes
+        )
+        self.only_malicious_checkbox.pack(side="left", padx=10)
+
+
 
         # Adjusting the padding for each column in the table
         self.tree.heading("IP", text="IP Address", anchor="w", command=lambda: self.sort_treeview("IP"))
@@ -1250,7 +1258,7 @@ class ConnectionMonitorApp:
                         conn.raddr.ip, conn.raddr.port, protocol, process_name,
                         country, cloudflare_status, ip_status, abuseipdb_status, whois_info
                     )
-
+                    self.send_alert(conn, ip_status, abuseipdb_status, country, cloudflare_status)
 
 
 
@@ -1408,89 +1416,99 @@ class ConnectionMonitorApp:
 
 
     def update_checkboxes(self):
-            """Checkbox durumlarını günceller"""
-            if self.all_events_var.get():
-                self.suspicious_var.set(False)
-            elif self.suspicious_var.get():
-                self.all_events_var.set(False)
+        """Checkbox durumlarını günceller"""
+        if self.all_events_var.get():
+            self.suspicious_var.set(False)
+            self.only_malicious_var.set(False)
+        elif self.suspicious_var.get():
+            self.all_events_var.set(False)
+            self.only_malicious_var.set(False)
+        elif self.only_malicious_var.get():
+            self.all_events_var.set(False)
+            self.suspicious_var.set(False)
 
 
 
 
     
     def send_alert(self, conn, ip_status, abuseipdb_status, country, cloudflare_status):
-            """Yeni əlaqə haqqında bildiriş göndərmək"""
+        """Yeni əlaqə haqqında bildiriş göndərmək"""
 
-            ip = conn.raddr.ip
-            port = conn.raddr.port
+        ip = conn.raddr.ip
+        port = conn.raddr.port
 
-            # Proses adını alırıq
-            if conn.pid:
-                try:
-                    process_name = psutil.Process(conn.pid).name()
-                except psutil.NoSuchProcess:
-                    process_name = 'Unknown'
-            else:
+        # Proses adını alırıq
+        if conn.pid:
+            try:
+                process_name = psutil.Process(conn.pid).name()
+            except psutil.NoSuchProcess:
                 process_name = 'Unknown'
+        else:
+            process_name = 'Unknown'
 
-            # Checkbox durumuna görə filtr
-            if self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
-                if not ("Malicious" in ip_status or "Suspicious" in ip_status):
-                    return  # Əgər nəticələr "Malicious" və ya "Suspicious" deyilsə, bildiriş göndərməyin
+        # Checkbox durumuna görə filtr
+        if self.all_events_var.get():  # "All Events" seçilibsə
+            pass  # Heç bir filtr tətbiq olunmur
+        elif self.suspicious_var.get():  # "Only Suspicious and Malicious" seçilibsə
+            if not ("Malicious" in ip_status or "Suspicious" in ip_status):
+                return  # Əgər nəticələr "Malicious" və ya "Suspicious" deyilsə, bildiriş göndərməyin
+        elif self.only_malicious_var.get():  # "Only Malicious" seçilibsə
+            if "Malicious" not in ip_status:
+                return  # Əgər nəticə "Malicious" deyilsə, bildiriş göndərməyin
 
-            # Emoji əsaslı alert statusu
-            if "Malicious" in ip_status:
-                event_type_emoji = "💥 Malicious"
-                sound_type = "malicious"
-            elif "Suspicious" in ip_status:
-                event_type_emoji = "⚠️ Suspicious"
-                sound_type = "warning"
-            elif "Clean" in ip_status:
-                event_type_emoji = "✅ Clean"
-                sound_type = None
-            else:
-                event_type_emoji = "🔍 Checking"
-                sound_type = None
+        # Emoji əsaslı alert statusu
+        if "Malicious" in ip_status:
+            event_type_emoji = "💥 Malicious"
+            sound_type = "malicious"
+        elif "Suspicious" in ip_status:
+            event_type_emoji = "⚠️ Suspicious"
+            sound_type = "warning"
+        elif "Clean" in ip_status:
+            event_type_emoji = "✅ Clean"
+            sound_type = None
+        else:
+            event_type_emoji = "🔍 Checking"
+            sound_type = None
 
-            # Emoji əsaslı bildiriş məzmunu
-            cloudflare_emoji = "☁️" if cloudflare_status == "Yes" else "🚫"
-            abuse_emoji = "🔥" if "High Risk" in abuseipdb_status else "⚖️" if "Medium Risk" in abuseipdb_status else "🔒"
-            virustotal_emoji = "💀" if "Malicious" in ip_status else "⚠️" if "Suspicious" in ip_status else "✅"
+        # Emoji əsaslı bildiriş məzmunu
+        cloudflare_emoji = "☁️" if cloudflare_status == "Yes" else "🚫"
+        abuse_emoji = "🔥" if "High Risk" in abuseipdb_status else "⚖️" if "Medium Risk" in abuseipdb_status else "🔒"
+        virustotal_emoji = "💀" if "Malicious" in ip_status else "⚠️" if "Suspicious" in ip_status else "✅"
 
-            # Notification mesajı (Windows üçün)
-            notification_message = (
-                f"🌐 IP: {ip}:{port} | 💻 Process: {process_name}\n"
-                f"🌏 Country: {country} | {cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
-                f"{virustotal_emoji} Virustotal: {ip_status}\n"
-                f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
-                "👁️ Big Bro says: Monitor your network carefully!"
-            )
+        # Notification mesajı (Windows üçün)
+        notification_message = (
+            f"🌐 IP: {ip}:{port} | 💻 Process: {process_name}\n"
+            f"🌏 Country: {country} | {cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
+            f"{virustotal_emoji} Virustotal: {ip_status}\n"
+            f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
+            "👁️ Big Bro says: Monitor your network carefully!"
+        )
 
-            # Telegram mesajı (istədiyiniz formatda)
-            telegram_message = (
-                f"{event_type_emoji}\n"
-                f"🌐 IP: {ip}:{port}\n"
-                f"💻 Process: {process_name}\n"
-                f"🌏 Country: {country}\n"
-                f"{cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
-                f"{virustotal_emoji} Virustotal: {ip_status}\n"
-                f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
-                "👁️ Big Brother is watching you!"
-            )
+        # Telegram mesajı (istədiyiniz formatda)
+        telegram_message = (
+            f"{event_type_emoji}\n"
+            f"🌐 IP: {ip}:{port}\n"
+            f"💻 Process: {process_name}\n"
+            f"🌏 Country: {country}\n"
+            f"{cloudflare_emoji} Cloudflare: {cloudflare_status}\n"
+            f"{virustotal_emoji} Virustotal: {ip_status}\n"
+            f"{abuse_emoji} AbuseIPDB: {abuseipdb_status}\n"
+            "👁️ Big Brother is watching you!"
+        )
 
-            notification_title = f"Event: {event_type_emoji}"
+        notification_title = f"Event: {event_type_emoji}"
 
-            # Windows bildirişi göstəririk
-            send_notification(notification_title, notification_message)
+        # Windows bildirişi göstəririk
+        send_notification(notification_title, notification_message)
 
-            # Telegram mesajını göndəririk (artıq asinxron şəkildə işləyəcək)
-            self.send_telegram_alert(telegram_message)
+        # Telegram mesajını göndəririk (artıq asinxron şəkildə işləyəcək)
+        self.send_telegram_alert(telegram_message)
 
-            # Riskli vəziyyətlər üçün səs siqnalı çalırıq
-            if sound_type == "malicious":
-                winsound.MessageBeep(winsound.MB_ICONHAND)  # Malicious üçün kritik səs
-            elif sound_type == "warning":
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        # Riskli vəziyyətlər üçün səs siqnalı çalırıq
+        if sound_type == "malicious":
+            winsound.MessageBeep(winsound.MB_ICONHAND)  # Malicious üçün kritik səs
+        elif sound_type == "warning":
+            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
 
 
 
