@@ -46,6 +46,6 @@ The resulting EXE file will be located in the dist folder.
 2. Run the Python Script Directly (No Console)
 If you simply want to run Big Bro without opening a console window, use pythonw.exe instead of python.exe:
  ```bash 
-   pythonw BigBro.py
+pythonw BigBro.py
  ```
 This method is useful for testing or local use without packaging the script.
