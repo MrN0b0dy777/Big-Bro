@@ -1261,10 +1261,14 @@ class ConnectionMonitorApp:
                     self.send_alert(conn, ip_status, abuseipdb_status, country, cloudflare_status)
 
 
+    def is_cloudflare_ip(self, ip_address):
+        for network in CLOUDFLARE_IPS:
+            if ip_addr(ip_address) in ip_network(network):
+                return "Yes"
+        return "No"
 
 
     def check_virustotal(self, ip_address):
-        """IP ünvanını VirusTotal ilə yoxlamaq"""
         url = f'https://www.virustotal.com/api/v3/ip_addresses/{ip_address}'
         headers = {
             'x-apikey': VIRUSTOTAL_API_KEY
@@ -1275,15 +1279,23 @@ class ConnectionMonitorApp:
                 data = response.json()
                 malicious_count = data['data']['attributes']['last_analysis_stats']['malicious']
                 if malicious_count >= 3:
-                    return "Malicious"  # 3 və ya daha çox zərərli qeydiyyat
+                    # Burada əlavə edin
+                    malicious_ips.add(ip_address)
+                    save_ip_list(malicious_ips, MALICIOUS_FILE)
+                    return "Malicious"
                 elif malicious_count >= 1:
-                    return "Suspicious"  # 1 və ya 2 zərərli qeydiyyat
+                    suspicious_ips.add(ip_address)
+                    save_ip_list(suspicious_ips, SUSPICIOUS_FILE)
+                    return "Suspicious"
                 else:
-                    return "Clean"  # Heç bir təhlükəli qeydiyyat yoxdur
+                    clean_ips.add(ip_address)
+                    save_ip_list(clean_ips, CLEAN_FILE)
+                    return "Clean"
             else:
                 return "Error"
         except Exception as e:
             return "Error"
+
 
     def check_abuseipdb(self, ip_address):
         """IP ünvanını AbuseIPDB ilə yoxlamaq və cached nəticələri istifadə etmək."""
@@ -1330,10 +1342,7 @@ class ConnectionMonitorApp:
 
 
     def check_ip_safeness(self, ip_address):
-        """IP ünvanını VirusTotal və AbuseIPDB ilə yoxlamaq və cached nəticələri istifadə etmək."""
-        global malicious_ips, suspicious_ips, clean_ips
-
-        # Əgər IP artıq siyahılardadırsa
+        # Əvvəlcə siyahılarda axtarır
         if ip_address in clean_ips:
             return "Clean"
         elif ip_address in malicious_ips:
@@ -1343,19 +1352,26 @@ class ConnectionMonitorApp:
 
         # VirusTotal yoxlaması
         vt_result = self.check_virustotal(ip_address)
-        if vt_result in ["Malicious", "Suspicious", "Clean"]:
-            return vt_result
 
-        # AbuseIPDB yoxlaması (VirusTotal nəticələri yoxdursa)
+        if vt_result == "Malicious":
+            malicious_ips.add(ip_address)
+            save_ip_list(malicious_ips, MALICIOUS_FILE)
+            return "Malicious"
+
+        elif vt_result == "Suspicious":
+            suspicious_ips.add(ip_address)
+            save_ip_list(suspicious_ips, SUSPICIOUS_FILE)
+            return "Suspicious"
+
+        elif vt_result == "Clean":
+            clean_ips.add(ip_address)
+            save_ip_list(clean_ips, CLEAN_FILE)
+            return "Clean"
+
+        # Əks halda (Error və ya s. olduqda) AbuseIPDB-yə müraciət edirik
         abuse_result = self.check_abuseipdb(ip_address)
         return abuse_result
 
-    def is_cloudflare_ip(self, ip_address):
-        """IP ünvanının Cloudflare-ə aid olub olmadığını yoxlayır"""
-        for network in CLOUDFLARE_IPS:
-            if ip_addr(ip_address) in ip_network(network):
-                return "Yes"
-        return "No"
 
     def get_country(self, ip_address):
         """ IP ünvanından ölkə məlumatını almaq """
