@@ -32,22 +32,20 @@ Big Bro is a robust network monitoring tool built with Python, tailored for **Wi
    Install the required Python libraries:
    ```bash
    pip install -r requirements.txt
-
+   
 Running the Application
 You have two options for running Big Bro:
 
 1. Convert to a Standalone EXE (No Console)
 If you wish to distribute Big Bro as a standalone executable (without a console window), use PyInstaller. Simply run:
-
-bash
-Copy
-pyinstaller --onefile --noconsole BigBro.py
+```bash 
+ pyinstaller --onefile --noconsole BigBro.py
+   ```
 The resulting EXE file will be located in the dist folder.
-
+  
 2. Run the Python Script Directly (No Console)
 If you simply want to run Big Bro without opening a console window, use pythonw.exe instead of python.exe:
-
-bash
-Copy
-pythonw BigBro.py
+ ```bash 
+ pythonw BigBro.py
+  ```
 This method is useful for testing or local use without packaging the script.
